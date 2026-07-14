@@ -1,15 +1,21 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import type { DBArtifact } from "@/lib/types";
-import { XIcon, FileTextIcon, CodeIcon, TableIcon } from "./icons";
+import type { FileArtifact } from "@/lib/types";
+import { XIcon, FileTextIcon, FileCodeIcon, DownloadIcon, ExternalLinkIcon } from "lucide-react";
+import { getArtifactLabel } from "@/lib/artifacts/registry";
 
 type ArtifactPanelProps = {
-  artifact: DBArtifact | null;
+  artifact: FileArtifact | null;
   onClose: () => void;
 };
+
+function getArtifactIcon(mimeType: string) {
+  if (mimeType === 'application/pdf') return <FileTextIcon size={14} className="text-muted-foreground" />;
+  if (mimeType.startsWith('image/')) return <FileTextIcon size={14} className="text-muted-foreground" />;
+  if (mimeType.startsWith('text/')) return <FileCodeIcon size={14} className="text-muted-foreground" />;
+  return <FileTextIcon size={14} className="text-muted-foreground" />;
+}
 
 export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
   return (
@@ -24,45 +30,38 @@ export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
         >
           {/* Header */}
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/40 px-4">
-            <div className="flex items-center gap-2">
-              {artifact.type === "code" ? (
-                <CodeIcon size={14} className="text-muted-foreground" />
-              ) : artifact.type === "sheet" ? (
-                <TableIcon size={14} className="text-muted-foreground" />
-              ) : (
-                <FileTextIcon size={14} className="text-muted-foreground" />
-              )}
+            <div className="flex items-center gap-2 min-w-0">
+              {getArtifactIcon(artifact.mimeType)}
               <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
                 {artifact.title}
               </span>
-              <span className="text-[11px] text-muted-foreground capitalize">
-                {artifact.type}
+              <span className="text-[11px] text-muted-foreground capitalize shrink-0">
+                {getArtifactLabel(artifact.mimeType)}
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              type="button"
-            >
-              <XIcon size={14} />
-            </button>
+            <div className="flex items-center gap-1">
+              <a
+                href={artifact.url}
+                download={artifact.title}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <DownloadIcon size={14} />
+              </a>
+              <button
+                onClick={onClose}
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                type="button"
+              >
+                <XIcon size={14} />
+              </button>
+            </div>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {artifact.type === "code" ? (
-              <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-[13px] leading-[1.6] text-background">
-                <code>{artifact.content}</code>
-              </pre>
-            ) : artifact.type === "sheet" ? (
-              <SheetView content={artifact.content ?? ""} />
-            ) : (
-              <div className="prose prose-neutral dark:prose-invert max-w-none text-[14px] leading-[1.6]">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {artifact.content ?? ""}
-                </ReactMarkdown>
-              </div>
-            )}
+            <ArtifactContent artifact={artifact} />
           </div>
         </motion.div>
       )}
@@ -70,42 +69,61 @@ export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
   );
 }
 
-function SheetView({ content }: { content: string }) {
-  const rows = content.split("\n").filter((r) => r.trim());
-  const data = rows.map((r) => r.split(",").map((c) => c.trim()));
+function ArtifactContent({ artifact }: { artifact: FileArtifact }) {
+  const { mimeType, url, title } = artifact;
 
-  if (data.length === 0) return null;
+  if (mimeType === 'application/pdf') {
+    return (
+      <iframe
+        src={url}
+        className="w-full h-full rounded-lg border border-border/30"
+        title={title}
+      />
+    );
+  }
 
-  const headers = data[0];
-  const body = data.slice(1);
+  if (mimeType.startsWith('image/')) {
+    return (
+      <div className="flex items-center justify-center">
+        <img
+          src={url}
+          alt={title}
+          className="max-w-full max-h-[80vh] rounded-lg object-contain"
+        />
+      </div>
+    );
+  }
+
+  if (mimeType.startsWith('text/')) {
+    return <TextFileView url={url} />;
+  }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[13px]">
-        <thead>
-          <tr className="border-b border-border">
-            {headers.map((h, i) => (
-              <th
-                key={i}
-                className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {body.map((row, ri) => (
-            <tr key={ri} className="border-b border-border/50">
-              {row.map((cell, ci) => (
-                <td key={ci} className="px-3 py-2 text-foreground">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex flex-col items-center justify-center gap-4 py-12 text-muted-foreground">
+      <FileTextIcon size={48} className="opacity-40" />
+      <p className="text-sm">{title}</p>
+      <p className="text-xs opacity-60">{getArtifactLabel(mimeType)}</p>
+      <a
+        href={url}
+        download={title}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 rounded-lg border border-border/40 px-4 py-2 text-sm hover:bg-muted transition-colors"
+      >
+        <DownloadIcon size={14} />
+        Download File
+        <ExternalLinkIcon size={12} className="opacity-60" />
+      </a>
     </div>
+  );
+}
+
+function TextFileView({ url }: { url: string }) {
+  return (
+    <iframe
+      src={url}
+      className="w-full h-full rounded-lg border border-border/30"
+      title="Text content"
+    />
   );
 }

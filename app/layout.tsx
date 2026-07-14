@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import "streamdown/styles.css";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 const inter = Inter({

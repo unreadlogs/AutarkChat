@@ -1,4 +1,18 @@
-export type ArtifactType = "text" | "code" | "sheet" | "image";
+export type FileArtifact = {
+  id: string;
+  chatId: string;
+  messageId: string;
+  title: string;
+  filePath: string;
+  url: string;
+  mimeType: string;
+  size: number;
+};
+
+export type DBArtifact = FileArtifact & {
+  _id?: import("mongodb").ObjectId;
+  createdAt: Date;
+};
 
 export type AttachmentRef = {
   id: string;
@@ -42,18 +56,6 @@ export type DBMessage = {
   content: string;
   responses: MessageResponse[];
   attachments: AttachmentRef[];
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type DBArtifact = {
-  _id?: import("mongodb").ObjectId;
-  id: string;
-  chatId: string;
-  messageId: string;
-  title: string;
-  type: ArtifactType;
-  content: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

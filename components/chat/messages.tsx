@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDownIcon, CopyIcon, CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import type { DBMessage, DBArtifact, AttachmentRef, MessageResponseUsage, ResponsePart } from "@/lib/types";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
+import { mermaid } from "@streamdown/mermaid";
+import { math } from "@streamdown/math";
+import { cjk } from "@streamdown/cjk";
+import type { DBMessage, FileArtifact, AttachmentRef, MessageResponseUsage, ResponsePart } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { Greeting } from "./greeting";
 import { MessageBubble, ThinkingMessage, ActionBlock } from "./message";
@@ -16,7 +19,7 @@ export type ChatItem = {
   role: "user" | "assistant";
   content: string;
   attachments?: AttachmentRef[];
-  artifacts?: DBArtifact[];
+  artifacts?: FileArtifact[];
   model?: string;
   modelLabel?: string;
   isMultiModel?: boolean;
@@ -30,7 +33,7 @@ export type ChatItem = {
 
 function flattenTurns(
   turns: DBMessage[],
-  artifacts: DBArtifact[],
+  artifacts: FileArtifact[],
   models: Array<{ id: string; name: string; modelId: string }>
 ): ChatItem[] {
   // Build two lookup maps: by modelId (e.g. "gpt-4o") AND by UUID id
@@ -185,27 +188,16 @@ function ModelCard({
               return parts.map((part, idx) => {
                 if (part.type === "text") {
                   return (
-                    <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[13px] leading-[1.65] break-words my-2 first:mt-0 last:mb-0">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          pre: ({ children }) => (
-                            <pre className="overflow-x-auto rounded-lg bg-foreground p-3 text-[11px] leading-[1.6] text-background">
-                              {children}
-                            </pre>
-                          ),
-                          code: ({ className, children, ...props }) => {
-                            const isBlock = className?.includes("language-");
-                            return isBlock ? (
-                              <code className={className} {...props}>{children}</code>
-                            ) : (
-                              <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]" {...props}>{children}</code>
-                            );
-                          },
-                        }}
+                    <div key={idx} className="my-2 first:mt-0 last:mb-0">
+                      <Streamdown
+                        animated
+                        isAnimating={isStreaming}
+                        plugins={{ code, mermaid, math, cjk }}
+                        shikiTheme={["github-light", "github-dark"]}
+                        controls={{ code: { copy: true, download: false } }}
                       >
                         {sanitizeText(part.content)}
-                      </ReactMarkdown>
+                      </Streamdown>
                     </div>
                   );
                 } else if (part.type === "action") {
@@ -219,8 +211,9 @@ function ModelCard({
               <div className="flex flex-col gap-1.5 mt-3">
                 {resp.artifacts.map((artifact) => {
                   const label =
-                    artifact.type === "code" ? "Code:" :
-                    artifact.type === "sheet" ? "Sheet:" : "Doc:";
+                    artifact.mimeType.startsWith('image/') ? "Image:" :
+                    artifact.mimeType === 'application/pdf' ? "PDF:" :
+                    artifact.mimeType.startsWith('text/') ? "File:" : "File:";
                   return (
                     <button
                       key={artifact.id}
@@ -329,7 +322,7 @@ function MultiModelGrid({
 type MessagesProps = {
   turns: DBMessage[];
   isLoading: boolean;
-  artifacts?: DBArtifact[];
+  artifacts?: FileArtifact[];
   models?: Array<{ id: string; name: string; modelId: string }>;
   status?: "ready" | "submitted" | "streaming" | "error";
   onSelectArtifact?: (id: string) => void;

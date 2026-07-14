@@ -1,11 +1,14 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
+import { mermaid } from "@streamdown/mermaid";
+import { math } from "@streamdown/math";
+import { cjk } from "@streamdown/cjk";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ChatItem } from "./messages";
-import type { DBArtifact, MessageResponseUsage, ResponsePart } from "@/lib/types";
+import type { FileArtifact, MessageResponseUsage, ResponsePart } from "@/lib/types";
 import { sanitizeText, cn } from "@/lib/utils";
 import { SparklesIcon, CopyIcon, CheckIcon, ModelIcon } from "./icons";
 import { TerminalIcon, WrenchIcon, FileCodeIcon, ChevronDownIcon, Loader2Icon, AlertCircleIcon } from "lucide-react";
@@ -13,7 +16,7 @@ import { TerminalIcon, WrenchIcon, FileCodeIcon, ChevronDownIcon, Loader2Icon, A
 type MessageBubbleProps = {
   item: ChatItem;
   isLoading?: boolean;
-  artifacts?: DBArtifact[];
+  artifacts?: FileArtifact[];
   onSelectArtifact?: (id: string) => void;
   isMultiModel?: boolean;
   responseIndex?: number;
@@ -27,6 +30,7 @@ export function ActionBlock({ action }: { action: Extract<ResponsePart, { type: 
   const getActionIcon = () => {
     if (action.name === "execute_command") return <TerminalIcon size={14} className="text-muted-foreground/80" />;
     if (action.name === "skill_view") return <WrenchIcon size={14} className="text-muted-foreground/80" />;
+    if (action.name === "artifact") return <FileCodeIcon size={14} className="text-muted-foreground/80" />;
     return <FileCodeIcon size={14} className="text-muted-foreground/80" />;
   };
 
@@ -42,6 +46,14 @@ export function ActionBlock({ action }: { action: Extract<ResponsePart, { type: 
       return (
         <span className="text-[12px] text-foreground font-semibold">
           Read Skill: <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{action.arguments?.name}</span>
+        </span>
+      );
+    }
+    if (action.name === "artifact") {
+      const files = action.arguments?.filePaths || [];
+      return (
+        <span className="text-[12px] text-foreground font-semibold">
+          Expose Artifact{files.length > 1 ? 's' : ''}: <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{files.length} file{files.length > 1 ? 's' : ''}</span>
         </span>
       );
     }
@@ -152,6 +164,20 @@ export function ActionBlock({ action }: { action: Extract<ResponsePart, { type: 
                     </div>
                   )}
                 </>
+              ) : action.name === "artifact" ? (
+                <>
+                  {action.output?.artifacts?.map((art: any, i: number) => (
+                    <div key={art.id || `art-${i}`} className="flex items-center gap-2 text-zinc-300 border-b border-zinc-800 pb-2 mb-2 last:border-0 last:mb-0">
+                      <span className="text-zinc-400 text-[10px] uppercase tracking-wider">{art.mimeType || 'file'}</span>
+                      <span className="font-semibold">{art.title || art.filePath}</span>
+                      {art.error && <span className="text-red-400 ml-auto">{art.error}</span>}
+                      {art.url && <span className="text-zinc-500 ml-auto text-[10px]">Exposed</span>}
+                    </div>
+                  ))}
+                  {(!action.output?.artifacts || action.output.artifacts.length === 0) && (
+                    <div className="text-zinc-500 italic">No artifacts exposed.</div>
+                  )}
+                </>
               ) : (
                 <div className="text-zinc-300">{JSON.stringify(action.output, null, 2)}</div>
               )}
@@ -247,27 +273,16 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
                   return parts.map((part, idx) => {
                     if (part.type === "text") {
                       return (
-                        <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[14px] leading-[1.65] break-words my-2.5 first:mt-0 last:mb-0">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              pre: ({ children }) => (
-                                <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-[12px] leading-[1.6] text-background">
-                                  {children}
-                                </pre>
-                              ),
-                              code: ({ className, children, ...props }) => {
-                                const isBlock = className?.includes("language-");
-                                return isBlock ? (
-                                  <code className={className} {...props}>{children}</code>
-                                ) : (
-                                  <code className="rounded bg-muted px-1.5 py-0.5 text-[12px]" {...props}>{children}</code>
-                                );
-                              },
-                            }}
+                        <div key={idx} className="my-2.5 first:mt-0 last:mb-0">
+                          <Streamdown
+                            animated
+                            isAnimating={isLoading}
+                            plugins={{ code, mermaid, math, cjk }}
+                            shikiTheme={["github-light", "github-dark"]}
+                            controls={{ code: { copy: true, download: false } }}
                           >
                             {sanitizeText(part.content)}
-                          </ReactMarkdown>
+                          </Streamdown>
                         </div>
                       );
                     } else if (part.type === "action") {
@@ -281,11 +296,9 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
                   <div className="flex flex-col gap-1.5 mt-3">
                     {artifacts.map((artifact) => {
                       const label =
-                        artifact.type === "code"
-                          ? "Code created:"
-                          : artifact.type === "sheet"
-                            ? "Spreadsheet created:"
-                            : "Document created:";
+                        artifact.mimeType.startsWith('image/') ? "Image:" :
+                        artifact.mimeType === 'application/pdf' ? "PDF:" :
+                        artifact.mimeType.startsWith('text/') ? "File:" : "File:";
                       return (
                         <button
                           key={artifact.id}
@@ -366,27 +379,16 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
                   return parts.map((part, idx) => {
                     if (part.type === "text") {
                       return (
-                        <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.6] break-words my-2.5 first:mt-0 last:mb-0">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              pre: ({ children }) => (
-                                <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-background text-[13px] leading-[1.6]">
-                                  {children}
-                                </pre>
-                              ),
-                              code: ({ className, children, ...props }) => {
-                                const isBlock = className?.includes("language-");
-                                return isBlock ? (
-                                  <code className={className} {...props}>{children}</code>
-                                ) : (
-                                  <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]" {...props}>{children}</code>
-                                );
-                              },
-                            }}
+                        <div key={idx} className="my-2.5 first:mt-0 last:mb-0">
+                          <Streamdown
+                            animated
+                            isAnimating={isLoading}
+                            plugins={{ code, mermaid, math, cjk }}
+                            shikiTheme={["github-light", "github-dark"]}
+                            controls={{ code: { copy: true, download: false } }}
                           >
                             {sanitizeText(part.content)}
-                          </ReactMarkdown>
+                          </Streamdown>
                         </div>
                       );
                     } else if (part.type === "action") {
@@ -400,11 +402,9 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
                   <div className="flex flex-col gap-1.5">
                     {artifacts.map((artifact) => {
                       const label =
-                        artifact.type === "code"
-                          ? "Code created:"
-                          : artifact.type === "sheet"
-                            ? "Spreadsheet created:"
-                            : "Document created:";
+                        artifact.mimeType.startsWith('image/') ? "Image:" :
+                        artifact.mimeType === 'application/pdf' ? "PDF:" :
+                        artifact.mimeType.startsWith('text/') ? "File:" : "File:";
                       return (
                         <button
                           key={artifact.id}

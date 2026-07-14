@@ -1,31 +1,13 @@
-import type { ArtifactType } from "../types";
+export function getArtifactLabel(mimeType: string): string {
+  if (mimeType === 'application/pdf') return 'PDF';
+  if (mimeType.startsWith('image/')) return 'Image';
+  if (mimeType.startsWith('text/')) return 'Document';
+  return 'File';
+}
 
-export type ArtifactHandler = {
-  kind: ArtifactType;
-  label: string;
-  language?: string;
-};
-
-export const artifactHandlers: Record<ArtifactType, ArtifactHandler> = {
-  text: {
-    kind: "text",
-    label: "Document",
-  },
-  code: {
-    kind: "code",
-    label: "Code",
-    language: "typescript",
-  },
-  sheet: {
-    kind: "sheet",
-    label: "Spreadsheet",
-  },
-  image: {
-    kind: "image",
-    label: "Image",
-  },
-};
-
-export function parseCsv(content: string): string[][] {
-  return content.split("\n").filter((row) => row.trim()).map((row) => row.split(",").map((cell) => cell.trim()));
+export function getMimeTypeIcon(mimeType: string): string {
+  if (mimeType === 'application/pdf') return 'pdf';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('text/')) return 'text';
+  return 'file';
 }

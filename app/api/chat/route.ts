@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { regularPrompt, artifactsPrompt, titlePrompt } from "@/lib/ai/prompts";
 import { titleModel } from "@/lib/ai/models";
-import { createArtifactTool } from "@/lib/ai/tools/create-artifact";
-import { editArtifactTool } from "@/lib/ai/tools/edit-artifact";
-import { updateArtifactTool } from "@/lib/ai/tools/update-artifact";
 import {
   getChatById,
   saveChat,
@@ -84,48 +81,18 @@ const openaiTools = [
   {
     type: "function" as const,
     function: {
-      name: "createArtifact",
-      description: "Create a new document, code file, or spreadsheet artifact",
+      name: "artifact",
+      description: "Expose generated files (PDFs, images, code, etc.) as viewable artifacts in the chat side panel. Call this AFTER generating files with execute_command.",
       parameters: {
         type: "object",
         properties: {
-          title: { type: "string" },
-          kind: { type: "string", enum: ["text", "code", "sheet"] },
-          content: { type: "string" },
+          filePaths: {
+            type: "array",
+            items: { type: "string" },
+            description: "Array of relative file paths (from workspace root) to expose as artifacts",
+          },
         },
-        required: ["title", "kind", "content"],
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "editArtifact",
-      description: "Edit an existing artifact using find-and-replace",
-      parameters: {
-        type: "object",
-        properties: {
-          artifactId: { type: "string" },
-          find: { type: "string" },
-          replace: { type: "string" },
-          replaceAll: { type: "boolean" },
-        },
-        required: ["artifactId", "find", "replace"],
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "updateArtifact",
-      description: "Completely rewrite an existing artifact with new content",
-      parameters: {
-        type: "object",
-        properties: {
-          artifactId: { type: "string" },
-          content: { type: "string" },
-        },
-        required: ["artifactId", "content"],
+        required: ["filePaths"],
       },
     },
   },
@@ -295,12 +262,9 @@ async function runModel({
 
           let output: any = {};
           try {
-            if (tc.name === "createArtifact") {
-              output = await createArtifactTool(chatId, messageId).execute(args);
-            } else if (tc.name === "editArtifact") {
-              output = await editArtifactTool(chatId).execute(args);
-            } else if (tc.name === "updateArtifact") {
-              output = await updateArtifactTool(chatId).execute(args);
+            if (tc.name === "artifact") {
+              const { artifactTool } = await import("@/lib/ai/tools/artifact");
+              output = await artifactTool(chatId, messageId).execute(args);
             } else if (tc.name === "skill_view") {
               const { getSkillDetails } = await import("@/lib/skills");
               output = await getSkillDetails(args.name);
@@ -545,6 +509,9 @@ export async function POST(request: Request) {
     } catch (e) {
       console.error("Failed to load skills for system prompt:", e);
     }
+
+    // Append artifact instructions
+    systemContent += `\n\nArtifacts:\n- When you generate files using execute_command (e.g., creating a PDF with a skill's Python script, writing code to a file), you MUST call the artifact tool to expose those files as viewable artifacts.\n- Call artifact({ filePaths: ["relative/path/to/file.pdf", ...] }) after generating files.\n- The artifact tool will make the files viewable in the chat's side panel.\n- You can expose PDFs, images, text files, code files, and any other file type.\n`;
 
     // Append command execution instructions
     systemContent += `\n\nCommand Execution / Terminal:\n- You can execute shell commands and run Python scripts in the server workspace using the tool execute_command(command). All commands run relative to the workspace root directory "/home/user/cloudbotics".\n- If a skill has python scripts in a \`scripts/\` folder, you can run them using: \`python3 skills/[skill_name]/scripts/[script_name].py [args]\`.\n`;

@@ -7,7 +7,7 @@ import { Messages } from "./messages";
 import { ChatInput } from "./input";
 import { ChatSidebar } from "./sidebar";
 import { ArtifactPanel } from "./artifact-viewer";
-import type { DBMessage, DBArtifact, AttachmentRef, MessageResponse } from "@/lib/types";
+import type { DBMessage, FileArtifact, AttachmentRef, MessageResponse } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,7 +22,7 @@ type ClientAttachment = {
 type ChatShellProps = {
   chatId?: string;
   initialTurns?: DBMessage[];
-  initialArtifacts?: DBArtifact[];
+  initialArtifacts?: FileArtifact[];
   initialTitle?: string;
   initialSelectedModels?: string[];
   compareLocked?: boolean;
@@ -34,8 +34,8 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
   const [secret, setSecret] = useState<string | null>(null);
 
   const [turns, setTurns] = useState<DBMessage[]>(initialTurns ?? []);
-  const [artifacts, setArtifacts] = useState<DBArtifact[]>(initialArtifacts ?? []);
-  const [activeArtifact, setActiveArtifact] = useState<DBArtifact | null>(null);
+  const [artifacts, setArtifacts] = useState<FileArtifact[]>(initialArtifacts ?? []);
+  const [activeArtifact, setActiveArtifact] = useState<FileArtifact | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
@@ -334,7 +334,7 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
                 );
               }
 
-              // Handle tool results (artifact creation/update & parts update)
+              // Handle tool results (artifact creation & parts update)
               if (parsed.type === "tool-result" && parsed.toolCallId && parsed.responseId) {
                 const output = parsed.output;
                 
@@ -357,28 +357,16 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
                   })
                 );
 
-                // Handle artifact creation
-                if (output && output.id) {
-                  const updatedArtifact: DBArtifact = {
-                    id: output.id,
-                    chatId: chatIdRef.current,
-                    messageId: messageId,
-                    title: output.title || "Untitled",
-                    type: output.type || "text",
-                    content: output.content || "",
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  };
+                // Handle file artifacts
+                if (output && output.artifacts) {
+                  const newArtifacts: FileArtifact[] = output.artifacts.filter((a: any) => a.id);
                   setArtifacts((prev) => {
-                    const idx = prev.findIndex((a) => a.id === updatedArtifact.id);
-                    if (idx > -1) {
-                      const copy = [...prev];
-                      copy[idx] = updatedArtifact;
-                      return copy;
-                    }
-                    return [...prev, updatedArtifact];
+                    const existing = new Set(prev.map((a) => a.id));
+                    return [...prev, ...newArtifacts.filter((a) => !existing.has(a.id))];
                   });
-                  setActiveArtifact(updatedArtifact);
+                  if (newArtifacts.length > 0) {
+                    setActiveArtifact(newArtifacts[0]);
+                  }
                 }
               }
 

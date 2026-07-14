@@ -1,8 +1,8 @@
 "use client";
 
 import { memo, useCallback, useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
 import { motion } from "framer-motion";
 import {
   CopyIcon,
@@ -145,34 +145,16 @@ function PureCompareCard({ data, isGenerating, onRetry, onStop }: CompareCardPro
         )}
 
         {(isStreaming || isDone) && content && (
-          <div className="prose prose-neutral dark:prose-invert max-w-none text-[14px] leading-[1.7] break-words">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                pre: ({ children }) => (
-                  <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-[12px] leading-[1.6] text-background">
-                    {children}
-                  </pre>
-                ),
-                code: ({ className, children, ...props }) => {
-                  const isBlock = className?.includes("language-");
-                  return isBlock ? (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  ) : (
-                    <code
-                      className="rounded bg-muted px-1.5 py-0.5 text-[12px]"
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  );
-                },
-              }}
+          <div>
+            <Streamdown
+              animated
+              isAnimating={isStreaming}
+              plugins={{ code }}
+              shikiTheme={["github-light", "github-dark"]}
+              controls={{ code: { copy: true, download: false } }}
             >
               {content}
-            </ReactMarkdown>
+            </Streamdown>
           </div>
         )}
 

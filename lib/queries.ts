@@ -300,14 +300,6 @@ export async function getArtifactsByChatId(chatId: string): Promise<DBArtifact[]
     .toArray();
 }
 
-export async function updateArtifactContent(artifactId: string, content: string): Promise<void> {
-  const { db } = await connectToDatabase();
-  await db.collection<DBArtifact>("artifacts").updateOne(
-    { id: artifactId },
-    { $set: { content, updatedAt: new Date() } }
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Attachment operations (standalone `attachments` collection)
 // ---------------------------------------------------------------------------

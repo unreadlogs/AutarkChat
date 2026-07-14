@@ -188,7 +188,7 @@ function ModelCard({
               return parts.map((part, idx) => {
                 if (part.type === "text") {
                   return (
-                    <div key={idx} className="my-2 first:mt-0 last:mb-0">
+                    <div key={idx} className="sd-content my-2 first:mt-0 last:mb-0">
                       <Streamdown
                         animated
                         isAnimating={isStreaming}
@@ -210,10 +210,11 @@ function ModelCard({
             {resp.artifacts && resp.artifacts.length > 0 && (
               <div className="flex flex-col gap-1.5 mt-3">
                 {resp.artifacts.map((artifact) => {
+                  const mt = artifact.mimeType || '';
                   const label =
-                    artifact.mimeType.startsWith('image/') ? "Image:" :
-                    artifact.mimeType === 'application/pdf' ? "PDF:" :
-                    artifact.mimeType.startsWith('text/') ? "File:" : "File:";
+                    mt.startsWith('image/') ? "Image:" :
+                    mt === 'application/pdf' ? "PDF:" :
+                    mt.startsWith('text/') ? "File:" : "File:";
                   return (
                     <button
                       key={artifact.id}

@@ -1,0 +1,31 @@
+# AutarkChat Docs Sidebar
+
+- [Home](/)
+- [Getting Started](getting-started.md)
+- Architecture
+  - [Overview](architecture/README.md)
+  - [Data Flow](architecture/data-flow.md)
+  - [Auth Flow](architecture/auth-flow.md)
+- API Reference
+  - [Overview](api/README.md)
+  - [Authentication](api/authentication.md)
+  - [Chat](api/chat.md)
+  - [Models](api/models.md)
+  - [History](api/history.md)
+  - [Messages](api/messages.md)
+  - [Sessions](api/sessions.md)
+  - [Usage](api/usage.md)
+  - [Skills](api/skills.md)
+  - [System](api/system.md)
+  - [Files](api/files.md)
+- Guides
+  - [Configuration](guides/configuration.md)
+  - [Personalization](guides/personalization.md)
+  - [Model Registry](guides/model-registry.md)
+  - [Deployment](guides/deployment.md)
+  - [Development](guides/development.md)
+- Reference
+  - [Folder Structure](reference/folder-structure.md)
+  - [Types](reference/types.md)
+  - [Troubleshooting](reference/troubleshooting.md)
+- [Changelog](changelog.md)

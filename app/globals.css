@@ -235,6 +235,48 @@ textarea:focus-visible {
   }
 }
 
+/* Streamdown code block overrides - compact, readable */
+.sd-content [data-streamdown="code-block"] {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding: 0.375rem !important;
+  gap: 0.25rem !important;
+  border-radius: 0.5rem !important;
+}
+.sd-content pre {
+  padding: 0.5rem !important;
+  margin: 0 !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+}
+.sd-content code {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace !important;
+}
+.sd-content code > span {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+/* Shiki syntax highlighting via CSS variables */
+/* Light mode: use --sdm-c (color) and --sdm-tbg (bg) from inline style */
+.sd-content [style*="--sdm-c"] {
+  color: var(--sdm-c);
+}
+.sd-content [style*="--sdm-tbg"] {
+  background-color: var(--sdm-tbg);
+}
+/* Dark mode: prefer --shiki-dark/--shiki-dark-bg, fallback to light variables */
+.dark .sd-content [style*="--shiki-dark"] {
+  color: var(--shiki-dark);
+}
+.dark .sd-content [style*="--shiki-dark-bg"] {
+  background-color: var(--shiki-dark-bg);
+}
+
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

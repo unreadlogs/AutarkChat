@@ -145,7 +145,7 @@ function PureCompareCard({ data, isGenerating, onRetry, onStop }: CompareCardPro
         )}
 
         {(isStreaming || isDone) && content && (
-          <div>
+          <div className="sd-content">
             <Streamdown
               animated
               isAnimating={isStreaming}

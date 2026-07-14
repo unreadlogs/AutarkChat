@@ -12,7 +12,7 @@ const compareBodySchema = z.object({
 
 function getClient(model: { apiKey: string; baseUrl: string | null }) {
   return new OpenAI({
-    apiKey: model.apiKey || process.env.OPENAI_API_KEY || "dummy-key",
+    apiKey: model.apiKey || "",
     baseURL: model.baseUrl || undefined,
   });
 }

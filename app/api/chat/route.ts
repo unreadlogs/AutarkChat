@@ -20,7 +20,7 @@ import OpenAI from "openai";
 
 function getOpenAIClient(apiKey?: string, baseUrl?: string | null) {
   return new OpenAI({
-    apiKey: apiKey || process.env.OPENAI_API_KEY || "dummy-key",
+    apiKey: apiKey || "",
     baseURL: baseUrl || undefined,
   });
 }

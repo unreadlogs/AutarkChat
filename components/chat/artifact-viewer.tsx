@@ -11,9 +11,10 @@ type ArtifactPanelProps = {
 };
 
 function getArtifactIcon(mimeType: string) {
-  if (mimeType === 'application/pdf') return <FileTextIcon size={14} className="text-muted-foreground" />;
-  if (mimeType.startsWith('image/')) return <FileTextIcon size={14} className="text-muted-foreground" />;
-  if (mimeType.startsWith('text/')) return <FileCodeIcon size={14} className="text-muted-foreground" />;
+  const mt = mimeType || '';
+  if (mt === 'application/pdf') return <FileTextIcon size={14} className="text-muted-foreground" />;
+  if (mt.startsWith('image/')) return <FileTextIcon size={14} className="text-muted-foreground" />;
+  if (mt.startsWith('text/')) return <FileCodeIcon size={14} className="text-muted-foreground" />;
   return <FileTextIcon size={14} className="text-muted-foreground" />;
 }
 
@@ -31,12 +32,12 @@ export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
           {/* Header */}
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/40 px-4">
             <div className="flex items-center gap-2 min-w-0">
-              {getArtifactIcon(artifact.mimeType)}
+              {getArtifactIcon(artifact.mimeType || '')}
               <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
                 {artifact.title}
               </span>
               <span className="text-[11px] text-muted-foreground capitalize shrink-0">
-                {getArtifactLabel(artifact.mimeType)}
+                {getArtifactLabel(artifact.mimeType || '')}
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -70,7 +71,9 @@ export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
 }
 
 function ArtifactContent({ artifact }: { artifact: FileArtifact }) {
-  const { mimeType, url, title } = artifact;
+  const mimeType = artifact.mimeType || '';
+  const url = artifact.url;
+  const title = artifact.title;
 
   if (mimeType === 'application/pdf') {
     return (

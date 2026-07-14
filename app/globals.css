@@ -235,7 +235,9 @@ textarea:focus-visible {
   }
 }
 
-/* Streamdown code block overrides - compact, readable */
+/* ============================================================
+   CHAT — Streamdown code block overrides (compact, chat UI)
+   ============================================================ */
 .sd-content [data-streamdown="code-block"] {
   margin-top: 0.5rem !important;
   margin-bottom: 0.5rem !important;
@@ -261,20 +263,288 @@ textarea:focus-visible {
   line-height: 1.5 !important;
 }
 
-/* Shiki syntax highlighting via CSS variables */
-/* Light mode: use --sdm-c (color) and --sdm-tbg (bg) from inline style */
-.sd-content [style*="--sdm-c"] {
-  color: var(--sdm-c);
+/* Shiki CSS variable tokens — chat */
+.sd-content [style*="--sdm-c"] { color: var(--sdm-c); }
+.sd-content [style*="--sdm-tbg"] { background-color: var(--sdm-tbg); }
+.dark .sd-content [style*="--shiki-dark"] { color: var(--shiki-dark); }
+.dark .sd-content [style*="--shiki-dark-bg"] { background-color: var(--shiki-dark-bg); }
+
+/* ============================================================
+   DOCS — Editorial prose following DESIGN.md
+   ============================================================ */
+
+.docs-prose {
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--graphite);
 }
-.sd-content [style*="--sdm-tbg"] {
-  background-color: var(--sdm-tbg);
+
+/* Headings */
+.docs-prose h1 {
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.9px;
+  color: var(--ink);
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--hairline-soft);
 }
-/* Dark mode: prefer --shiki-dark/--shiki-dark-bg, fallback to light variables */
-.dark .sd-content [style*="--shiki-dark"] {
-  color: var(--shiki-dark);
+.docs-prose h2 {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+  margin-top: 48px;
+  margin-bottom: 12px;
 }
-.dark .sd-content [style*="--shiki-dark-bg"] {
-  background-color: var(--shiki-dark-bg);
+.docs-prose h3 {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+  color: var(--ink-soft);
+  margin-top: 32px;
+  margin-bottom: 8px;
+}
+.docs-prose h4 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  margin-top: 24px;
+  margin-bottom: 6px;
+}
+
+/* Paragraph */
+.docs-prose p {
+  line-height: 1.75;
+  color: var(--graphite);
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+/* Links */
+.docs-prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--hairline-soft);
+  transition: text-decoration-color 0.15s;
+}
+.docs-prose a:hover {
+  text-decoration-color: var(--ink);
+}
+
+/* Lists */
+.docs-prose ul,
+.docs-prose ol {
+  margin: 0 0 14px 0;
+  padding-left: 22px;
+}
+.docs-prose ul { list-style-type: disc; }
+.docs-prose ol { list-style-type: decimal; }
+.docs-prose li {
+  line-height: 1.65;
+  color: var(--graphite);
+  margin-bottom: 4px;
+}
+.docs-prose li > p { margin-bottom: 4px; }
+.docs-prose li strong { color: var(--ink); }
+
+/* Inline code */
+.docs-prose :not(pre) > code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 12.5px;
+  background: var(--hairline);
+  color: var(--ink-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: baseline;
+}
+.dark .docs-prose :not(pre) > code {
+  background: oklch(0.2 0 0);
+  border-color: oklch(0.28 0 0);
+  color: oklch(0.82 0 0);
+}
+
+/* Streamdown code blocks inside docs */
+.docs-prose [data-streamdown="code-block"] {
+  margin: 18px 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--hairline-soft) !important;
+  overflow: hidden !important;
+  background: var(--hairline) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+.dark .docs-prose [data-streamdown="code-block"] {
+  background: oklch(0.16 0 0) !important;
+  border-color: oklch(0.22 0 0) !important;
+}
+
+/* Inner pre inside Streamdown code block (docs) */
+.docs-prose [data-streamdown="code-block"] pre {
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow-x: auto;
+}
+
+/* Standalone pre tags */
+.docs-prose pre {
+  margin: 18px 0;
+  padding: 16px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline-soft);
+  background: var(--hairline);
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+.dark .docs-prose pre {
+  background: oklch(0.16 0 0);
+  border-color: oklch(0.22 0 0);
+}
+
+/* Code inside pre */
+.docs-prose pre code,
+.docs-prose [data-streamdown="code-block"] code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  color: inherit;
+}
+
+/* Shiki token colors in docs */
+.docs-prose [style*="--sdm-c"] { color: var(--sdm-c); }
+.docs-prose [style*="--sdm-tbg"] { background-color: var(--sdm-tbg); }
+.dark .docs-prose [style*="--shiki-dark"] { color: var(--shiki-dark) !important; }
+.dark .docs-prose [style*="--shiki-dark-bg"] { background-color: var(--shiki-dark-bg) !important; }
+
+/* Tables — hairline grid, no shadows */
+.docs-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 22px 0;
+  font-size: 14px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  overflow: hidden;
+  display: table;
+}
+.docs-prose thead {
+  background: var(--hairline);
+}
+.dark .docs-prose thead {
+  background: oklch(0.19 0 0);
+}
+.docs-prose th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--stone-t);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline-soft);
+  white-space: nowrap;
+}
+.docs-prose td {
+  padding: 10px 14px;
+  color: var(--graphite);
+  border-bottom: 1px solid var(--hairline-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+  vertical-align: top;
+}
+.docs-prose tr:last-child td {
+  border-bottom: none;
+}
+.docs-prose tbody tr:hover {
+  background: var(--hairline);
+}
+.dark .docs-prose tbody tr:hover {
+  background: oklch(0.175 0 0);
+}
+.docs-prose td code,
+.docs-prose th code {
+  font-size: 12px !important;
+}
+
+/* Blockquote */
+.docs-prose blockquote {
+  margin: 18px 0;
+  padding: 12px 16px;
+  border-left: 2px solid var(--ink);
+  background: var(--hairline);
+  border-radius: 0 6px 6px 0;
+  color: var(--graphite);
+}
+.dark .docs-prose blockquote {
+  background: oklch(0.18 0 0);
+  border-left-color: oklch(0.6 0 0);
+}
+.docs-prose blockquote p {
+  margin: 0;
+  color: inherit;
+}
+
+/* HR */
+.docs-prose hr {
+  border: none;
+  border-top: 1px solid var(--hairline-soft);
+  margin: 40px 0;
+}
+
+/* Strong / Em */
+.docs-prose strong { font-weight: 600; color: var(--ink); }
+.docs-prose em { font-style: italic; }
+
+/* Image */
+.docs-prose img {
+  border-radius: 8px;
+  border: 1px solid var(--hairline-soft);
+  max-width: 100%;
+  height: auto;
+  margin: 18px 0;
+}
+
+/* Task list */
+.docs-prose input[type="checkbox"] {
+  accent-color: var(--ink);
+  margin-right: 6px;
+}
+
+/* Copy button overrides in docs */
+.docs-prose [data-streamdown="code-block"] button {
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+/* Spacing resets */
+.docs-content > .docs-prose > *:first-child { margin-top: 0; }
+.docs-content > .docs-prose > *:last-child { margin-bottom: 0; }
+
+/* Mermaid diagrams */
+.docs-prose [data-streamdown="mermaid"] {
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 18px 0;
+  overflow: hidden;
+  text-align: center;
 }
 
 @utility no-scrollbar {

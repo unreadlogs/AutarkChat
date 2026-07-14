@@ -4,7 +4,7 @@ import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PlusIcon, TrashIcon, MessageSquareIcon, SettingsIcon, MoonIcon, SunIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, BarChart3Icon, Pin, GitCompareIcon, Star } from "lucide-react";
+import { PlusIcon, TrashIcon, MessageSquareIcon, SettingsIcon, MoonIcon, SunIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, BarChart3Icon, Pin, GitCompareIcon, Star, BookOpenIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -57,6 +57,8 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
   const router = useRouter();
   const pathname = usePathname();
   const isSettingsActive = pathname ? pathname.startsWith("/settings") : false;
+  const isCompareActive = pathname ? pathname.startsWith("/compare") : false;
+  const isDocsActive = pathname ? pathname.startsWith("/docs") : false;
   const [chats, setChats] = useState<ChatHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -381,6 +383,7 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
               onClick={() => router.push("/compare")}
               className={cn(
                 "flex items-center hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-200 rounded-lg text-left text-sidebar-foreground/75",
+                isCompareActive && "bg-sidebar-accent text-foreground font-semibold",
                 isExpanded
                   ? "w-full py-2 px-2.5 gap-3 text-[13px] font-medium"
                   : "size-9 justify-center mx-auto"
@@ -388,7 +391,7 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
               type="button"
               title="Compare Models"
             >
-              <GitCompareIcon size={isExpanded ? 14 : 18} className={cn("shrink-0", "opacity-60")} />
+              <GitCompareIcon size={isExpanded ? 14 : 18} className={cn("shrink-0", isCompareActive ? "opacity-100" : "opacity-60")} />
               {isExpanded && <span>Compare</span>}
             </button>
 
@@ -397,6 +400,7 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
               onClick={() => router.push("/settings")}
               className={cn(
                 "flex items-center hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-200 rounded-lg text-left text-sidebar-foreground/75",
+                isSettingsActive && "bg-sidebar-accent text-foreground font-semibold",
                 isExpanded
                   ? "w-full py-2 px-2.5 gap-3 text-[13px] font-medium"
                   : "size-9 justify-center mx-auto"
@@ -406,6 +410,23 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
             >
               <SettingsIcon size={isExpanded ? 14 : 18} className={cn("shrink-0", isSettingsActive ? "opacity-100" : "opacity-60")} />
               {isExpanded && <span>Settings</span>}
+            </button>
+
+            {/* Documentation Link */}
+            <button
+              onClick={() => router.push("/docs")}
+              className={cn(
+                "flex items-center hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-200 rounded-lg text-left text-sidebar-foreground/75",
+                isDocsActive && "bg-sidebar-accent text-foreground font-semibold",
+                isExpanded
+                  ? "w-full py-2 px-2.5 gap-3 text-[13px] font-medium"
+                  : "size-9 justify-center mx-auto"
+              )}
+              type="button"
+              title="Documentation"
+            >
+              <BookOpenIcon size={isExpanded ? 14 : 18} className={cn("shrink-0", isDocsActive ? "opacity-100" : "opacity-60")} />
+              {isExpanded && <span>Documentation</span>}
             </button>
 
             {/* GitHub Link */}

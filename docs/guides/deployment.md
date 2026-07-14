@@ -41,14 +41,6 @@ PORT=8080 HOSTNAME=0.0.0.0 npm run start
 
 There is no Dockerfile in the repo. You can create one based on the official Next.js standalone output configuration. The project uses `next.config.ts` which could be extended with `output: "standalone"` for optimized Docker builds.
 
-### Vercel
-
-Since this is a Next.js project, it deploys directly to Vercel. Note that:
-
-- **File uploads** write to the local filesystem (`public/uploads/`), which won't persist across serverless instances
-- **Skills** are loaded from the local filesystem (`skills/` directory), which also won't persist
-- Use a Vercel Blob or S3-compatible storage adaptor if you need file persistence in production
-
 ### Platform Notes
 
 | Aspect | Consideration |

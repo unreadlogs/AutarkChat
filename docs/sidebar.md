@@ -1,6 +1,6 @@
 # AutarkChat Docs Sidebar
 
-- [Home](/)
+- [Overview](README.md)
 - [Getting Started](getting-started.md)
 - Architecture
   - [Overview](architecture/README.md)

@@ -1,0 +1,129 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import type { NavSection } from "@/lib/docs-nav";
+
+function AutarkLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 775 740" xmlns="http://www.w3.org/2000/svg" width={size} height={size} aria-hidden="true">
+      <path d="M 332.933333333,25.6 c -124.933333333,250.8 -227.6,458.933333333 -227.6,461.466666667 c 0,0.933333333333 16.2666666667,10.4 36.4,20.9333333333 c 64.9333333333,34.4 109.466666667,57.3333333333 110.933333333,57.3333333333 c 0.8,0 5.86666666667,-9.2 11.3333333333,-20.4 c 5.33333333333,-11.0666666667 22.9333333333,-46.5333333333 38.9333333333,-78.8 c 16,-32.1333333333 29.0666666667,-59.2 29.0666666667,-60.2666666667 c 0,-1.06666666667 -4.8,-11.0666666667 -10.6666666667,-22.4 l -10.8,-20.5333333333 l 16.9333333333,-33.7333333333 c 9.33333333333,-18.6666666667 19.7333333333,-39.8666666667 23.2,-47.2 c 3.46666666667,-7.33333333333 28,-57.4666666667 54.6666666667,-111.333333333 c 56.6666666667,-114.8 74.6666666666,-151.866666667 74.6666666666,-153.466666667 c 0,-0.666666666667 -31.4666666667,-1.2 -71.0666666666,-1.2 l -71.0666666666,0 l -4.93333333333,9.6 z" fill="currentColor"/>
+      <path d="M 459.333333333,198.266666667 c -11.4666666667,23.3333333333 -28.4,57.8666666667 -37.7333333333,76.9333333333 l -16.8,34.4 l 37.6,75.2 c 20.6666666667,41.3333333333 37.6,75.4666666666 37.6,75.8666666666 c 0,0.4 -21.2,0.666666666667 -47.2,0.666666666667 c -26,0 -47.6,0.533333333333 -48,1.06666666667 c -0.266666666667,0.533333333333 2,5.2 5.06666666667,10.2666666667 c 15.2,24.5333333333 72.5333333333,118 88.8,144.8 c 23.4666666667,38.5333333333 42.1333333333,68.9333333333 53.0666666667,86.2666666666 l 8.53333333333,13.6 l 108,-0.133333333333 c 84,0 108,-0.4 108.533333333,-1.73333333333 c 0.666666666667,-1.73333333333 -14.2666666667,-32.5333333333 -81.3333333333,-168 c -23.8666666667,-48.4 -43.4666666667,-88 -43.4666666667,-88.2666666666 c 0,-0.133333333333 -15.2,-31.0666666667 -33.7333333333,-68.8 c -77.6,-157.2 -116.133333333,-234.4 -117.066666667,-234.4 c -0.666666666667,0 -10.4,19.0666666667 -21.8666666667,42.2666666667 z" fill="currentColor"/>
+      <path d="M 74.2666666666,535.6 c -0.4,0.666666666667 -0.8,8.8 -1.06666666667,18.4 l -0.533333333333,17.3333333333 l 42.2666666667,21.3333333333 c 23.3333333333,11.7333333333 42.4,21.7333333333 42.4,22.1333333333 c 0,0.4 -24.8,10.8 -54.9333333333,23.2 c -30.2666666667,12.4 -55.7333333333,23.0666666667 -56.6666666667,23.8666666667 c -2.66666666667,2.53333333333 -31.2,59.2 -30.1333333333,59.8666666667 c 0.533333333333,0.4 12.8,-4.8 27.0666666667,-11.3333333333 c 14.2666666667,-6.53333333333 35.6,-16.2666666667 47.3333333333,-21.6 c 11.7333333333,-5.46666666667 44.1333333333,-20.2666666667 72,-33.0666666667 c 27.8666666667,-12.8 56.6666666667,-26 64,-29.3333333333 c 7.86666666666,-3.46666666667 13.3333333333,-6.66666666667 13.3333333333,-7.73333333333 c 0,-1.06666666667 -8.4,-6.13333333333 -20,-12 c -10.9333333333,-5.46666666667 -47.4666666667,-24 -81.0666666666,-41.0666666667 c -33.4666666667,-16.9333333333 -61.4666666667,-30.9333333333 -62.1333333333,-30.9333333333 c -0.8,0 -1.6,0.4 -1.86666666667,0.933333333333 z" fill="currentColor"/>
+      <path d="M 280.533333333,688.4 c -0.266666666667,0.933333333333 -0.4,7.73333333333 -0.266666666667,15.0666666667 l 0.4,13.2 l 70,0 l 70,-0.133333333333 l 0,-14.5333333333 l 0,-14.6666666667 l -69.7333333333,-0.4 c -56.9333333333,-0.266666666667 -69.7333333333,0 -70.4,1.46666666667 z" fill="currentColor"/>
+    </svg>
+  );
+}
+
+export function DocsSidebar({
+  nav,
+  open,
+  onClose,
+}: {
+  nav: NavSection[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-[var(--ink)]/20 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar panel */}
+      <aside
+        className={cn(
+          "shrink-0 border-r border-[var(--hairline-soft)] bg-[var(--hairline)]/40 h-dvh overflow-hidden transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-50 w-[258px] md:static md:z-auto",
+          open ? "translate-x-0 shadow-xl shadow-[var(--ink)]/8" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--hairline-soft)] px-4">
+            <Link href="/docs" onClick={onClose} className="flex items-center gap-2.5 min-w-0">
+              <div className="flex size-7 shrink-0 items-center justify-center text-[var(--ink)]">
+                <AutarkLogo size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[var(--ink)] tracking-tight leading-none">AutarkChat</p>
+                <p className="text-[10.5px] text-[var(--stone-t)] leading-none mt-0.5 tracking-wide uppercase">Docs</p>
+              </div>
+            </Link>
+            <button
+              onClick={onClose}
+              className="flex md:hidden size-7 items-center justify-center rounded-md text-[var(--graphite)] hover:bg-[var(--hairline)] hover:text-[var(--ink)] transition-colors"
+              type="button"
+              aria-label="Close sidebar"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Nav — driven by parsed sidebar.md */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+            {nav.map((section, i) => (
+              <div key={section.title || i}>
+                {section.title && (
+                  <p className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[var(--stone-t)]">
+                    {section.title}
+                  </p>
+                )}
+                <div className="flex flex-col gap-px">
+                  {section.links.map((link) => {
+                    const isActive = pathname === link.href;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={onClose}
+                        className={cn(
+                          "flex items-center justify-between rounded-md px-2.5 py-[7px] text-[13px] transition-all duration-150",
+                          isActive
+                            ? "bg-[var(--ink)] text-[var(--canvas)] font-medium"
+                            : "text-[var(--graphite)] hover:bg-[var(--hairline)] hover:text-[var(--ink)]"
+                        )}
+                      >
+                        <span>{link.label}</span>
+                        {isActive && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-50">
+                            <polyline points="9 18 15 12 9 6"/>
+                          </svg>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Footer */}
+          <div className="border-t border-[var(--hairline-soft)] p-3 shrink-0">
+            <Link
+              href="/chat"
+              onClick={onClose}
+              className="flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] font-medium text-[var(--graphite)] hover:bg-[var(--hairline)] hover:text-[var(--ink)] transition-all duration-150"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              </svg>
+              Back to App
+            </Link>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}

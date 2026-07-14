@@ -186,6 +186,7 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
                   provider: s.provider ?? null,
                   model: s.model,
                   content: "",
+                  parts: [],
                   status: "streaming",
                   usage: null,
                 })),
@@ -202,13 +203,30 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
         prev.map((t) => {
           if (t.id !== messageId) return t;
           const responses = t.responses.length
-            ? t.responses.map((r) => (r.id === responseId ? { ...r, content: next } : r))
+            ? t.responses.map((r) => {
+                if (r.id !== responseId) return r;
+                let parts = r.parts ? [...r.parts] : [];
+                const lastPart = parts[parts.length - 1];
+                if (lastPart && lastPart.type === "text") {
+                  parts[parts.length - 1] = {
+                    type: "text",
+                    content: lastPart.content + delta,
+                  };
+                } else {
+                  parts.push({
+                    type: "text",
+                    content: delta,
+                  });
+                }
+                return { ...r, content: next, parts };
+              })
             : [
                 {
                   id: responseId,
                   provider: null,
                   model: "",
                   content: next,
+                  parts: [{ type: "text", content: next }],
                   status: "streaming",
                   usage: null,
                 } as MessageResponse,
@@ -293,9 +311,53 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
                 if (responseId) applyText(responseId, parsed.text);
               }
 
-              // Handle tool results (artifact creation/update)
-              if (parsed.type === "tool-result" && parsed.output) {
+              // Handle tool-call
+              if (parsed.type === "tool-call" && parsed.toolCallId && parsed.responseId) {
+                setTurns((prev) =>
+                  prev.map((t) => {
+                    if (t.id !== messageId) return t;
+                    const responses = t.responses.map((r) => {
+                      if (r.id !== parsed.responseId) return r;
+                      let parts = r.parts ? [...r.parts] : [];
+                      if (!parts.some((p) => p.type === "action" && p.id === parsed.toolCallId)) {
+                        parts.push({
+                          type: "action",
+                          id: parsed.toolCallId,
+                          name: parsed.name,
+                          arguments: parsed.arguments,
+                        });
+                      }
+                      return { ...r, parts };
+                    });
+                    return { ...t, responses };
+                  })
+                );
+              }
+
+              // Handle tool results (artifact creation/update & parts update)
+              if (parsed.type === "tool-result" && parsed.toolCallId && parsed.responseId) {
                 const output = parsed.output;
+                
+                // Update parts array
+                setTurns((prev) =>
+                  prev.map((t) => {
+                    if (t.id !== messageId) return t;
+                    const responses = t.responses.map((r) => {
+                      if (r.id !== parsed.responseId) return r;
+                      let parts = r.parts ? [...r.parts] : [];
+                      parts = parts.map((p) => {
+                        if (p.type === "action" && p.id === parsed.toolCallId) {
+                          return { ...p, output };
+                        }
+                        return p;
+                      });
+                      return { ...r, parts };
+                    });
+                    return { ...t, responses };
+                  })
+                );
+
+                // Handle artifact creation
                 if (output && output.id) {
                   const updatedArtifact: DBArtifact = {
                     id: output.id,
@@ -416,6 +478,7 @@ export function ChatShell({ chatId: initialChatId, initialTurns, initialArtifact
             status={status}
             models={allModels}
             onSelectArtifact={handleSelectArtifact}
+            onSelectPrompt={setInput}
           />
 
           <div className="sticky bottom-0 z-10 mx-auto flex w-full max-w-4xl gap-2 bg-background px-4 pb-4 flex-col">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { CpuIcon, BarChart3Icon, SettingsIcon, ShieldIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, ArrowLeftIcon, UserIcon } from "lucide-react";
+import { CpuIcon, BarChart3Icon, SettingsIcon, ShieldIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, ArrowLeftIcon, UserIcon, WrenchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -66,6 +66,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const tabs = [
     { name: "General", href: "/settings", icon: SettingsIcon, active: pathname === "/settings" },
     { name: "Personalization", href: "/settings/personalization", icon: UserIcon, active: pathname === "/settings/personalization" },
+    { name: "Skills", href: "/settings/skills", icon: WrenchIcon, active: pathname === "/settings/skills" },
     { name: "Models", href: "/settings/models", icon: CpuIcon, active: pathname === "/settings/models" },
     { name: "Sessions", href: "/settings/sessions", icon: ShieldIcon, active: pathname === "/settings/sessions" },
     { name: "Usage Stats", href: "/settings/usage", icon: BarChart3Icon, active: pathname === "/settings/usage" },

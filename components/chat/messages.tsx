@@ -5,10 +5,10 @@ import { ArrowDownIcon, CopyIcon, CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { DBMessage, DBArtifact, AttachmentRef, MessageResponseUsage } from "@/lib/types";
+import type { DBMessage, DBArtifact, AttachmentRef, MessageResponseUsage, ResponsePart } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { Greeting } from "./greeting";
-import { MessageBubble, ThinkingMessage } from "./message";
+import { MessageBubble, ThinkingMessage, ActionBlock } from "./message";
 import { ModelIcon } from "./icons";
 
 export type ChatItem = {
@@ -23,6 +23,7 @@ export type ChatItem = {
   responseIndex?: number;
   totalResponses?: number;
   usage?: MessageResponseUsage | null;
+  parts?: ResponsePart[];
   // For grouped multi-model rendering
   groupedResponses?: ChatItem[];
 };
@@ -79,6 +80,7 @@ function flattenTurns(
         responseIndex: index,
         totalResponses: responses.length,
         usage: response.usage ?? null,
+        parts: response.parts,
       }));
 
       items.push({
@@ -102,6 +104,7 @@ function flattenTurns(
         responseIndex: 0,
         totalResponses: 1,
         usage: response.usage ?? null,
+        parts: response.parts,
       });
     }
   }
@@ -177,30 +180,40 @@ function ModelCard({
           </div>
         ) : (
           <>
-            {hasContent && (
-              <div className="prose prose-neutral dark:prose-invert max-w-none text-[13px] leading-[1.65] break-words">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    pre: ({ children }) => (
-                      <pre className="overflow-x-auto rounded-lg bg-foreground p-3 text-[11px] leading-[1.6] text-background">
-                        {children}
-                      </pre>
-                    ),
-                    code: ({ className, children, ...props }) => {
-                      const isBlock = className?.includes("language-");
-                      return isBlock ? (
-                        <code className={className} {...props}>{children}</code>
-                      ) : (
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]" {...props}>{children}</code>
-                      );
-                    },
-                  }}
-                >
-                  {sanitizeText(textContent)}
-                </ReactMarkdown>
-              </div>
-            )}
+            {(() => {
+              const parts = resp.parts || (textContent ? [{ type: "text" as const, content: textContent }] : []);
+              return parts.map((part, idx) => {
+                if (part.type === "text") {
+                  return (
+                    <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[13px] leading-[1.65] break-words my-2 first:mt-0 last:mb-0">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          pre: ({ children }) => (
+                            <pre className="overflow-x-auto rounded-lg bg-foreground p-3 text-[11px] leading-[1.6] text-background">
+                              {children}
+                            </pre>
+                          ),
+                          code: ({ className, children, ...props }) => {
+                            const isBlock = className?.includes("language-");
+                            return isBlock ? (
+                              <code className={className} {...props}>{children}</code>
+                            ) : (
+                              <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]" {...props}>{children}</code>
+                            );
+                          },
+                        }}
+                      >
+                        {sanitizeText(part.content)}
+                      </ReactMarkdown>
+                    </div>
+                  );
+                } else if (part.type === "action") {
+                  return <ActionBlock key={part.id || idx} action={part as any} />;
+                }
+                return null;
+              });
+            })()}
 
             {resp.artifacts && resp.artifacts.length > 0 && (
               <div className="flex flex-col gap-1.5 mt-3">
@@ -320,9 +333,10 @@ type MessagesProps = {
   models?: Array<{ id: string; name: string; modelId: string }>;
   status?: "ready" | "submitted" | "streaming" | "error";
   onSelectArtifact?: (id: string) => void;
+  onSelectPrompt?: (prompt: string) => void;
 };
 
-export function Messages({ turns, isLoading, artifacts, models = [], status, onSelectArtifact }: MessagesProps) {
+export function Messages({ turns, isLoading, artifacts, models = [], status, onSelectArtifact, onSelectPrompt }: MessagesProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
@@ -362,8 +376,8 @@ export function Messages({ turns, isLoading, artifacts, models = [], status, onS
   return (
     <div className="relative flex-1 bg-background">
       {items.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <Greeting />
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4 overflow-y-auto">
+          <Greeting onSelectPrompt={onSelectPrompt} />
         </div>
       )}
       <div

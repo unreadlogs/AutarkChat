@@ -13,11 +13,22 @@ export type MessageResponseUsage = {
   totalTokens: number;
 };
 
+export type ResponsePart =
+  | { type: "text"; content: string }
+  | {
+      type: "action";
+      id: string;
+      name: string;
+      arguments: any;
+      output?: any;
+    };
+
 export type MessageResponse = {
   id: string;
   provider?: string | null;
   model: string;
   content: string;
+  parts?: ResponsePart[];
   status?: string | null;
   error?: string | null;
   usage?: MessageResponseUsage | null;

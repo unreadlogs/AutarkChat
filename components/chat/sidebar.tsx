@@ -4,7 +4,7 @@ import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PlusIcon, TrashIcon, MessageSquareIcon, SettingsIcon, MoonIcon, SunIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, BarChart3Icon, Pin, GitCompareIcon } from "lucide-react";
+import { PlusIcon, TrashIcon, MessageSquareIcon, SettingsIcon, MoonIcon, SunIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftIcon, BarChart3Icon, Pin, GitCompareIcon, Star } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,7 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
   const [chats, setChats] = useState<ChatHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [stars, setStars] = useState<number | null>(null);
 
   const { setTheme, resolvedTheme } = useTheme();
 
@@ -96,15 +97,52 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
   // Sync the generated title back into the local chat list
   useEffect(() => {
     if (currentChatId && currentChatTitle) {
-      setChats((prev) =>
-        prev.map((c) =>
-          c.id === currentChatId && c.title !== currentChatTitle
-            ? { ...c, title: currentChatTitle }
-            : c
-        )
-      );
+      setChats((prev) => {
+        const exists = prev.some((c) => c.id === currentChatId);
+        if (exists) {
+          return prev.map((c) =>
+            c.id === currentChatId && c.title !== currentChatTitle
+              ? { ...c, title: currentChatTitle }
+              : c
+          );
+        } else {
+          const newItem: ChatHistoryItem = {
+            id: currentChatId,
+            title: currentChatTitle,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            pinned: false,
+          };
+          return [newItem, ...prev];
+        }
+      });
     }
   }, [currentChatId, currentChatTitle]);
+
+  // Fetch GitHub stars count with localStorage cache to avoid rate limiting
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const cached = localStorage.getItem("github_stars");
+    const cachedTime = localStorage.getItem("github_stars_time");
+    const now = Date.now();
+
+    if (cached && cachedTime && now - parseInt(cachedTime, 10) < 30 * 60 * 1000) {
+      setStars(parseInt(cached, 10));
+      return;
+    }
+
+    fetch("https://api.github.com/repos/unreadlogs/autarkchat")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.stargazers_count === "number") {
+          setStars(data.stargazers_count);
+          localStorage.setItem("github_stars", String(data.stargazers_count));
+          localStorage.setItem("github_stars_time", String(now));
+        }
+      })
+      .catch(() => {});
+  }, [isExpanded]);
 
   const handleDelete = useCallback(
     async (chatId: string) => {
@@ -376,16 +414,24 @@ export function ChatSidebar({ isExpanded, onToggleExpand, currentChatId, current
                 href="https://github.com/unreadlogs/autarkchat"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 w-full py-2 px-2.5 rounded-lg hover:bg-sidebar-accent/50 hover:text-foreground transition-colors text-[13px] font-medium text-sidebar-foreground/75"
+                className="flex items-center justify-between w-full py-2 px-2.5 rounded-lg hover:bg-sidebar-accent/50 hover:text-foreground transition-colors text-[13px] font-medium text-sidebar-foreground/75"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-3.5 fill-current opacity-60 shrink-0"
-                  aria-hidden="true"
-                >
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.08 6.839 9.404.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.077 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                </svg>
-                <span>GitHub Repository</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="size-3.5 fill-current opacity-60 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.08 6.839 9.404.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.077 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                  </svg>
+                  <span className="truncate">GitHub Repository</span>
+                </div>
+                {stars !== null && (
+                  <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground bg-muted/15 px-1.5 py-0.5 rounded border border-border/10">
+                    <Star size={10} className="fill-current text-yellow-500/80" />
+                    <span>{stars}</span>
+                  </div>
+                )}
               </a>
             )}
           </div>

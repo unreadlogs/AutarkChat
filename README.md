@@ -49,7 +49,14 @@ Inspect prompt, completion, and total token usage directly within chat messages 
 
 Manage active sessions across devices, inspect login activity, and revoke sessions when needed.
 
----
+### Skills Registry & Command Execution
+
+Extend assistant capabilities with multi-file scripts and procedures (e.g. PDF form parsers, image generators, math utilities).
+- **Control Center**: Install, uninstall, enable, or disable custom workspace skills on the fly.
+- **Terminal execution**: Exposes an execution tool permitting the AI to run Python scripts or shell utilities directly on local files.
+- **Collapsible Consoles**: Chronological terminal outputs are formatted inside message bubbles with real-time `stdout`/`stderr` logging.
+
+--- 
 
 ## Why AutarkChat?
 
@@ -62,6 +69,7 @@ It focuses on:
 - Provider flexibility
 - Token transparency
 - Clean, distraction-free interface
+- **Consolidated Billing (One Bill, No Separate AI Subscriptions)**: Stop subscribing to multiple distinct consumer AI plans. Bring your own developer API keys or connect proxy routers (like OpenRouter, Together AI, or local LLM instances) to consolidate 100% of your usage into a single bill at raw developer prices.
 
 Whether you're prompt engineering, benchmarking models, or integrating multiple providers, AutarkChat provides a single workspace optimized for experimentation.
 
@@ -104,7 +112,7 @@ Whether you're prompt engineering, benchmarking models, or integrating multiple 
 ### Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/unreadlogs/AutarkChat.git
 cd autarkchat
 ```
 

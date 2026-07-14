@@ -16,7 +16,7 @@ import {
   recordTokenUsage,
   getPersonalization,
 } from "@/lib/queries";
-import type { DBMessage, DBModel, MessageResponse } from "@/lib/types";
+import type { DBMessage, DBModel, MessageResponse, ResponsePart } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
 import { verifyAdminAuth } from "@/lib/auth";
 import OpenAI from "openai";
@@ -129,6 +129,40 @@ const openaiTools = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "skill_view",
+      description: "Read the full manual of a specific specialized skill/procedure to understand its instructions.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The unique ID/name of the skill (e.g., 'math_solver')",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "execute_command",
+      description: "Execute a bash shell command on the server workspace to run scripts, compile code, or execute CLI tools. Runs in the '/home/user/cloudbotics' directory.",
+      parameters: {
+        type: "object",
+        properties: {
+          command: {
+            type: "string",
+            description: "The exact shell command line string to execute.",
+          },
+        },
+        required: ["command"],
+      },
+    },
+  },
 ];
 
 type RunModelArgs = {
@@ -149,7 +183,7 @@ async function runModel({
   withTools,
   chatId,
   messageId,
-}: RunModelArgs): Promise<{ content: string; usage: MessageResponse["usage"]; error: string | null }> {
+}: RunModelArgs): Promise<{ content: string; parts: ResponsePart[]; usage: MessageResponse["usage"]; error: string | null }> {
   const client = getOpenAIClient(modelConfig.apiKey, modelConfig.baseUrl);
   const msgs = baseContext.map((m) => ({ ...m }));
 
@@ -159,6 +193,7 @@ async function runModel({
   let assistantText = "";
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
+  const parts: ResponsePart[] = [];
 
   try {
     while (keepRunning && steps < maxSteps) {
@@ -217,7 +252,9 @@ async function runModel({
       const validToolCalls = toolCallsAcc.filter((tc) => tc.id && tc.name);
 
       if (assistantText) {
+        parts.push({ type: "text", content: assistantText });
         msgs.push({ role: "assistant", content: assistantText });
+        assistantText = "";
       }
 
       if (validToolCalls.length > 0 && withTools) {
@@ -232,6 +269,21 @@ async function runModel({
           content: null,
           tool_calls: apiToolCalls,
         } as any);
+
+        // Add actions to parts
+        validToolCalls.forEach((tc) => {
+          let args: any = {};
+          try {
+            args = JSON.parse(tc.arguments);
+          } catch {}
+          parts.push({
+            type: "action",
+            id: tc.id,
+            name: tc.name,
+            arguments: args,
+          });
+          send("tool-call", { toolCallId: tc.id, name: tc.name, arguments: args, responseId });
+        });
 
         const toolExecPromises = validToolCalls.map(async (tc) => {
           let args: any = {};
@@ -249,6 +301,26 @@ async function runModel({
               output = await editArtifactTool(chatId).execute(args);
             } else if (tc.name === "updateArtifact") {
               output = await updateArtifactTool(chatId).execute(args);
+            } else if (tc.name === "skill_view") {
+              const { getSkillDetails } = await import("@/lib/skills");
+              output = await getSkillDetails(args.name);
+            } else if (tc.name === "execute_command") {
+              const { exec } = await import("child_process");
+              const { promisify } = await import("util");
+              const execPromise = promisify(exec);
+              try {
+                const { stdout, stderr } = await execPromise(args.command, {
+                  cwd: "/home/user/cloudbotics",
+                  timeout: 30000,
+                });
+                output = { stdout, stderr };
+              } catch (err: any) {
+                output = {
+                  error: err.message,
+                  stdout: err.stdout || "",
+                  stderr: err.stderr || "",
+                };
+              }
             } else {
               output = { error: `Tool ${tc.name} not found` };
             }
@@ -256,7 +328,13 @@ async function runModel({
             output = { error: err.message || "Failed to execute tool" };
           }
 
-          send("tool-result", { toolCallId: tc.id, output });
+          // Update tool output in parts
+          const actionPart = parts.find((p) => p.type === "action" && p.id === tc.id);
+          if (actionPart && actionPart.type === "action") {
+            actionPart.output = output;
+          }
+
+          send("tool-result", { toolCallId: tc.id, output, responseId });
 
           return {
             role: "tool",
@@ -268,15 +346,20 @@ async function runModel({
         const toolMessages = await Promise.all(toolExecPromises);
         msgs.push(...(toolMessages as any));
 
-        assistantText = "";
         keepRunning = true;
       } else {
         keepRunning = false;
       }
     }
 
+    const finalContent = parts
+      .filter((p) => p.type === "text")
+      .map((p) => p.content)
+      .join("\n\n");
+
     return {
-      content: assistantText,
+      content: finalContent,
+      parts,
       usage: totalPromptTokens > 0 || totalCompletionTokens > 0
         ? {
             promptTokens: totalPromptTokens,
@@ -287,8 +370,17 @@ async function runModel({
       error: null,
     };
   } catch (err: any) {
+    if (assistantText) {
+      parts.push({ type: "text", content: assistantText });
+    }
+    const finalContent = parts
+      .filter((p) => p.type === "text")
+      .map((p) => p.content)
+      .join("\n\n");
+
     return {
-      content: assistantText,
+      content: finalContent,
+      parts,
       usage: totalPromptTokens > 0 || totalCompletionTokens > 0
         ? {
             promptTokens: totalPromptTokens,
@@ -439,6 +531,24 @@ export async function POST(request: Request) {
       systemContent += `\n\nCustom Instructions / Guidelines:\n${personalization.customInstructions}`;
     }
 
+    // Load enabled skills and append to system prompt
+    try {
+      const { getSkills } = await import("@/lib/skills");
+      const allSkills = await getSkills();
+      const enabledSkills = allSkills.filter((s) => s.isEnabled);
+      if (enabledSkills.length > 0) {
+        systemContent += `\n\nYou have access to a set of skills. Below is the list of available skills. If the user's intent requires a specialized procedure, you must explicitly call the tool skill_view(name) to read its full manual.\nAvailable skills:\n`;
+        enabledSkills.forEach((s) => {
+          systemContent += `- "${s.id}": ${s.description}\n`;
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load skills for system prompt:", e);
+    }
+
+    // Append command execution instructions
+    systemContent += `\n\nCommand Execution / Terminal:\n- You can execute shell commands and run Python scripts in the server workspace using the tool execute_command(command). All commands run relative to the workspace root directory "/home/user/cloudbotics".\n- If a skill has python scripts in a \`scripts/\` folder, you can run them using: \`python3 skills/[skill_name]/scripts/[script_name].py [args]\`.\n`;
+
     console.log("=== SYSTEM PROMPT ===");
     console.log(systemContent);
     console.log("=====================");
@@ -453,6 +563,12 @@ export async function POST(request: Request) {
         }
 
         try {
+          if (titlePromise) {
+            titlePromise.then((title) => {
+              send("chat-title", { data: title });
+            }).catch(() => {});
+          }
+
           // Announce the response slots so the client can render one bubble per model.
           const responseSlots = selectedModels.map((m) => ({
             id: generateUUID(),
@@ -471,7 +587,7 @@ export async function POST(request: Request) {
                 modelConfig,
                 baseContext: modelContext,
                 responseId,
-                withTools: false,
+                withTools: true,
                 chatId: id,
                 messageId: currentMessageId!,
               });
@@ -481,6 +597,7 @@ export async function POST(request: Request) {
                 provider: modelConfig.provider,
                 model: modelConfig.modelId,
                 content: r.content,
+                parts: r.parts,
                 status: r.error ? "error" : "completed",
                 error: r.error,
                 usage: r.usage,

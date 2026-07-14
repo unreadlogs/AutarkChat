@@ -3,11 +3,12 @@
 import { memo, useCallback, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ChatItem } from "./messages";
-import type { DBArtifact, MessageResponseUsage } from "@/lib/types";
-import { sanitizeText } from "@/lib/utils";
+import type { DBArtifact, MessageResponseUsage, ResponsePart } from "@/lib/types";
+import { sanitizeText, cn } from "@/lib/utils";
 import { SparklesIcon, CopyIcon, CheckIcon, ModelIcon } from "./icons";
+import { TerminalIcon, WrenchIcon, FileCodeIcon, ChevronDownIcon, Loader2Icon, AlertCircleIcon } from "lucide-react";
 
 type MessageBubbleProps = {
   item: ChatItem;
@@ -20,6 +21,148 @@ type MessageBubbleProps = {
   usage?: MessageResponseUsage | null;
 };
 
+export function ActionBlock({ action }: { action: Extract<ResponsePart, { type: "action" }> }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const getActionIcon = () => {
+    if (action.name === "execute_command") return <TerminalIcon size={14} className="text-muted-foreground/80" />;
+    if (action.name === "skill_view") return <WrenchIcon size={14} className="text-muted-foreground/80" />;
+    return <FileCodeIcon size={14} className="text-muted-foreground/80" />;
+  };
+
+  const getActionLabel = () => {
+    if (action.name === "execute_command") {
+      return (
+        <span className="font-mono text-[12px] text-foreground font-semibold truncate block">
+          $ {action.arguments?.command || "execute command"}
+        </span>
+      );
+    }
+    if (action.name === "skill_view") {
+      return (
+        <span className="text-[12px] text-foreground font-semibold">
+          Read Skill: <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{action.arguments?.name}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="text-[12px] text-foreground font-semibold">
+        Call Tool: <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{action.name}</span>
+      </span>
+    );
+  };
+
+  const hasOutput = action.output !== undefined && action.output !== null;
+  const isError = hasOutput && (action.output.error || (action.output.stderr && action.output.stderr.trim().length > 0));
+  const isExecuting = !hasOutput;
+
+  return (
+    <div className="border border-border/30 rounded-md overflow-hidden my-3 bg-muted/5 max-w-full">
+      {/* Header bar */}
+      <div
+        onClick={() => hasOutput && setIsOpen(!isOpen)}
+        className={cn(
+          "flex items-center justify-between gap-3 px-4 py-2.5 select-none",
+          hasOutput ? "cursor-pointer hover:bg-muted/10" : "cursor-default"
+        )}
+      >
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="shrink-0">
+            {isExecuting ? (
+              <Loader2Icon size={14} className="animate-spin text-muted-foreground" />
+            ) : isError ? (
+              <AlertCircleIcon size={14} className="text-destructive" />
+            ) : (
+              getActionIcon()
+            )}
+          </div>
+          <div className="min-w-0 flex-1 truncate">{getActionLabel()}</div>
+        </div>
+
+        {/* Status indicator and toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={cn(
+            "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+            isExecuting
+              ? "border-border text-muted-foreground bg-muted/10"
+              : isError
+                ? "border-destructive/30 text-destructive bg-destructive/5"
+                : "border-border/30 text-foreground bg-muted/15"
+          )}>
+            {isExecuting ? "Executing" : isError ? "Failed" : "Done"}
+          </span>
+          {hasOutput && (
+            <ChevronDownIcon
+              size={14}
+              className={cn("text-muted-foreground/60 transition-transform duration-150", isOpen && "rotate-180")}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Expanded Console Window */}
+      <AnimatePresence>
+        {isOpen && hasOutput && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="border-t border-border/20"
+          >
+            <div className="p-3 bg-zinc-950 dark:bg-black text-[11px] font-mono text-zinc-100 overflow-x-auto max-h-72 leading-relaxed whitespace-pre-wrap select-text">
+              {action.name === "execute_command" ? (
+                <>
+                  {action.output.stdout && (
+                    <div className="text-zinc-100">{action.output.stdout}</div>
+                  )}
+                  {action.output.stderr && (
+                    <div className="text-red-400 mt-1 font-semibold">{action.output.stderr}</div>
+                  )}
+                  {action.output.error && (
+                    <div className="text-red-400 font-bold border-l-2 border-red-500 pl-2 py-0.5 my-1">
+                      {action.output.error}
+                    </div>
+                  )}
+                  {!action.output.stdout && !action.output.stderr && !action.output.error && (
+                    <div className="text-zinc-500 italic">Command finished with no output.</div>
+                  )}
+                </>
+              ) : action.name === "skill_view" ? (
+                <>
+                  {action.output.error ? (
+                    <div className="text-red-400">{action.output.error}</div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="text-zinc-400 font-bold uppercase tracking-wider text-[9px] border-b border-zinc-850 pb-1">
+                        Loaded Skill: {action.output.name}
+                      </div>
+                      <div className="space-y-2">
+                        {action.output.files?.map((file: any) => (
+                          <div key={file.name} className="border border-zinc-800 rounded bg-zinc-900/50 overflow-hidden">
+                            <div className="px-3 py-1 bg-zinc-900 text-zinc-300 font-bold text-[10px] border-b border-zinc-800">
+                              {file.name}
+                            </div>
+                            <pre className="p-3 text-[10px] text-zinc-400 max-h-40 overflow-y-auto leading-relaxed whitespace-pre-wrap">
+                              {file.content}
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-zinc-300">{JSON.stringify(action.output, null, 2)}</div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMultiModel, responseIndex, totalResponses, usage }: MessageBubbleProps) {
   const isUser = item.role === "user";
   const textContent = item.content;
@@ -31,7 +174,7 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
     setTimeout(() => setCopied(false), 2000);
   }, [textContent]);
 
-  const hasContent = textContent.trim().length > 0;
+  const hasContent = textContent.trim().length > 0 || (item.parts && item.parts.length > 0);
   const isThinking = !isUser && isLoading && !hasContent;
   const showStreamingDot = !isUser && isLoading;
 
@@ -99,30 +242,40 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
               </div>
             ) : (
               <>
-                {textContent && (
-                  <div className="prose prose-neutral dark:prose-invert max-w-none text-[14px] leading-[1.65] break-words">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        pre: ({ children }) => (
-                          <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-[12px] leading-[1.6] text-background">
-                            {children}
-                          </pre>
-                        ),
-                        code: ({ className, children, ...props }) => {
-                          const isBlock = className?.includes("language-");
-                          return isBlock ? (
-                            <code className={className} {...props}>{children}</code>
-                          ) : (
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-[12px]" {...props}>{children}</code>
-                          );
-                        },
-                      }}
-                    >
-                      {sanitizeText(textContent)}
-                    </ReactMarkdown>
-                  </div>
-                )}
+                {(() => {
+                  const parts = item.parts || (textContent ? [{ type: "text" as const, content: textContent }] : []);
+                  return parts.map((part, idx) => {
+                    if (part.type === "text") {
+                      return (
+                        <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[14px] leading-[1.65] break-words my-2.5 first:mt-0 last:mb-0">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              pre: ({ children }) => (
+                                <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-[12px] leading-[1.6] text-background">
+                                  {children}
+                                </pre>
+                              ),
+                              code: ({ className, children, ...props }) => {
+                                const isBlock = className?.includes("language-");
+                                return isBlock ? (
+                                  <code className={className} {...props}>{children}</code>
+                                ) : (
+                                  <code className="rounded bg-muted px-1.5 py-0.5 text-[12px]" {...props}>{children}</code>
+                                );
+                              },
+                            }}
+                          >
+                            {sanitizeText(part.content)}
+                          </ReactMarkdown>
+                        </div>
+                      );
+                    } else if (part.type === "action") {
+                      return <ActionBlock key={part.id || idx} action={part as any} />;
+                    }
+                    return null;
+                  });
+                })()}
 
                 {artifacts && artifacts.length > 0 && (
                   <div className="flex flex-col gap-1.5 mt-3">
@@ -208,30 +361,40 @@ function PureMessageBubble({ item, isLoading, artifacts, onSelectArtifact, isMul
               </div>
             ) : (
               <>
-                {textContent && (
-                  <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.6] break-words">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        pre: ({ children }) => (
-                          <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-background text-[13px] leading-[1.6]">
-                            {children}
-                          </pre>
-                        ),
-                        code: ({ className, children, ...props }) => {
-                          const isBlock = className?.includes("language-");
-                          return isBlock ? (
-                            <code className={className} {...props}>{children}</code>
-                          ) : (
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]" {...props}>{children}</code>
-                          );
-                        },
-                      }}
-                    >
-                      {sanitizeText(textContent)}
-                    </ReactMarkdown>
-                  </div>
-                )}
+                {(() => {
+                  const parts = item.parts || (textContent ? [{ type: "text" as const, content: textContent }] : []);
+                  return parts.map((part, idx) => {
+                    if (part.type === "text") {
+                      return (
+                        <div key={idx} className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.6] break-words my-2.5 first:mt-0 last:mb-0">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              pre: ({ children }) => (
+                                <pre className="overflow-x-auto rounded-lg bg-foreground p-4 text-background text-[13px] leading-[1.6]">
+                                  {children}
+                                </pre>
+                              ),
+                              code: ({ className, children, ...props }) => {
+                                const isBlock = className?.includes("language-");
+                                return isBlock ? (
+                                  <code className={className} {...props}>{children}</code>
+                                ) : (
+                                  <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]" {...props}>{children}</code>
+                                );
+                              },
+                            }}
+                          >
+                            {sanitizeText(part.content)}
+                          </ReactMarkdown>
+                        </div>
+                      );
+                    } else if (part.type === "action") {
+                      return <ActionBlock key={part.id || idx} action={part as any} />;
+                    }
+                    return null;
+                  });
+                })()}
 
                 {artifacts && artifacts.length > 0 && (
                   <div className="flex flex-col gap-1.5">
